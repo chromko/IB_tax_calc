@@ -236,7 +236,7 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
 
         prev_year_pl, df_1, df_2 = create_pl_table(additional_trans_df)
 
-    pl_df = pd.concat([prev_year_pl, this_year_pl])
+    pl_df = pd.concat([prev_year_pl, this_year_pl, df_1, df_2 )
     pl_df["Cash"] = pl_df["IBCommission"] + pl_df["Proceeds"]
     pl = create_currency_table_bs(courses_file=currency_courses_file, df=pl_df)
 
