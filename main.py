@@ -55,8 +55,10 @@ def merge_tables(result_table, table1, table2, iteration=0):
         for row1 in table1_copy.iterrows():
             if row1[1]["Open/CloseIndicator"] != "O" and row1[1]["Open/CloseIndicator"] != "C":
                 continue
-            row2_o = table2[(table2.Symbol == row1[1]["Symbol"]) & (
-                table2["Buy/Sell"] != row1[1]["Buy/Sell"])]
+            row2_o = table2[
+                (table2.Symbol == row1[1]["Symbol"]) &
+                (table2["Buy/Sell"] != row1[1]["Buy/Sell"]) &
+                ((row1[1]["Open/CloseIndicator"] == "O") & (row1[1]["Date"] <= table2["Date"]) | ( row1[1]["Open/CloseIndicator"] == "C") & (row1[1]["Date"] >= table2["Date"] ))  ]
             if row2_o.empty:
                 row1[1]["Open/CloseIndicator"] += ";P"
                 table1.loc[row1[0]] = row1[1]
@@ -66,9 +68,8 @@ def merge_tables(result_table, table1, table2, iteration=0):
                 if row2_o.empty:
                     continue
                 row2 = row2_o.loc[row2_o.index[0]]
-
                 copy_row1 = deepcopy(row1)
-                result_table = result_table.append(row2)
+                result_table = result_table.append(row2,ignore_index=True)
 
                 oc_ref = abs(row2["Quantity"] / row1[1]["Quantity"])
 
@@ -76,11 +77,10 @@ def merge_tables(result_table, table1, table2, iteration=0):
                 row1[1]["Proceeds"] = oc_ref * row1[1]["Proceeds"]
                 row1[1]["IBCommission"] = oc_ref * row1[1]["IBCommission"]
 
-                pl = row1[1]["Proceeds"] + row2["Proceeds"] + \
-                    row1[1]["IBCommission"] + row2["IBCommission"]
+                pl = row1[1]["Proceeds"] + row2["Proceeds"] + row1[1]["IBCommission"] + row2["IBCommission"]
 
-                result_table = result_table.append(row1[1])
-                result_table.at[row1[0], "PL"] = pl
+                result_table = result_table.append(row1[1],ignore_index=True)
+                result_table.at[result_table.index[-1], "PL"] = pl
                 table2 = table2.drop(row2_o.index[0])
                 copy_row1[1]["Quantity"] -= row1[1]["Quantity"]
                 copy_row1[1]["Proceeds"] -= row1[1]["Proceeds"]
@@ -93,6 +93,11 @@ def merge_tables(result_table, table1, table2, iteration=0):
                               "Quantity"] = copy_row1[1]["Quantity"]
                     table1.at[copy_row1[0],
                               "Proceeds"] = copy_row1[1]["Proceeds"]
+                    table1.at[copy_row1[0],
+                              "IBCommission"] = copy_row1[1]["IBCommission"]
+
+                if oc_ref > 0:
+                    break
 
         return merge_tables(result_table, table1, table2, iteration)
 
@@ -214,16 +219,20 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                 "TradeDate": "Date"})
         prev_year_df["Date"] = pd.to_datetime(
             prev_year_df["Date"], format="%Y%m%d")
-        prev_year_df = prev_year_df[prev_year_df["Open/CloseIndicator"] == "O"]
 
+        _ , prev_year_pl_df_1, prev_year_pl_df_2 = create_pl_table(prev_year_df)
         additional_trans_df = pd.concat(
             [
-                prev_year_df[prev_year_df["Open/CloseIndicator"] == "O"],
+                prev_year_pl_df_1[prev_year_pl_df_1["Open/CloseIndicator"] == "O;P"][::-1],
+                prev_year_pl_df_2[prev_year_pl_df_2["Open/CloseIndicator"] == "O;P"][::-1],
                 df_1[df_1["Open/CloseIndicator"] == "C;P"],
                 df_2[df_2["Open/CloseIndicator"] == "C;P"]
             ]).reset_index(drop=True)
+
         additional_trans_df.loc[additional_trans_df["Open/CloseIndicator"]
                                 == "C;P", "Open/CloseIndicator"] = "C"
+        additional_trans_df.loc[additional_trans_df["Open/CloseIndicator"]
+                                == "O;P", "Open/CloseIndicator"] = "O"
 
         prev_year_pl, df_1, df_2 = create_pl_table(additional_trans_df)
 
@@ -271,11 +280,11 @@ def create_div_table(df):
 
 def count_tax_debt(df, final_tax):
 
-    df["tax_percent"] = abs(df["Tax"] / df["Amount"]) * 100
-    df["tax_RUB"] = df["Tax"] * df["CB_course"]
+    df["Tax_percent"] = abs(df["Tax"] / df["Amount"]) * 100
+    df["Tax_RUB"] = df["Tax"] * df["CB_course"]
 
-    df["tax_to_pay_RUB"] = df[df["tax_percent"] <= float(
-        final_tax)]["tax_RUB"] * (float(final_tax) - df["tax_percent"]) / df["tax_percent"]
+    df["Tax_to_pay_RUB"] = df[df["Tax_percent"] <= float(
+        final_tax)]["Tax_RUB"] * (float(final_tax) - df["Tax_percent"]) / df["Tax_percent"]
 
     return df
 
@@ -292,7 +301,17 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
     tax_list = create_div_table(this_year_df)
     pl = create_currency_table_bs(
         courses_file=currency_courses_file, df=tax_list)
-    tax_debt_pl = count_tax_debt(pl, finish_tax)
+    tax_debt_pl = count_tax_debt(pl, finish_tax)[["Symbol","Date","CurrencyPrimary","Amount","Tax","PL","CB_course","Tax_to_pay_RUB"]].rename(index=str, columns={
+        "Symbol": "Актив",
+        "Date": "Дата",
+        "CurrencyPrimary": "Валюта",
+        "Tax_to_pay_RUB": "Сумма к уплате",
+        "CB_course": "Курс руб. ЦБРФ",
+        "PL": "Прибыль / Убыток, Валюта",
+        "Tax": "Налог, валюта",
+        "Tax_percent": "Уплаченный налог, процент",
+        "Amount": "Сумма выплат, Валюта"
+        })
 
     return tax_debt_pl
 
@@ -318,7 +337,7 @@ def main():
     currency_courses_file = "RC_F09_03_2017_T16_03_2019 (1).xlsx"
 
     current_year_file = "U2164556_2018.txt"
-    previous_year_file = "U2164556_2017.txt"
+    previous_year_file = "IB_2017.csv"
 
     trn_pl = count_trn_pl(
         current_year_file,
@@ -328,11 +347,14 @@ def main():
     div_pl_tax = count_dividents_pl_tax(
         current_year_file,
         currency_courses_file=currency_courses_file, finish_tax=args.tax)
-    report_prefix = args.current_year_file.split(".")[0]
-    trn_pl.to_excel(current_year_file + "PL.xlsx")
-    trn_pl.to_excel(current_year_file + "DIV_TAX.xlsx")
+    report_prefix = current_year_file.split(".")[0]
+    # report_prefix = args.current_year_file.split(".")[0]
 
-    print(trn_pl)
+    pl_to_compare = trn_pl.groupby(['Актив'])[['Прибыль / Убыток, Валюта']].sum()
+    pl_to_compare.to_excel(report_prefix + "compare.xlsx")
+
+    trn_pl.to_excel(report_prefix + "PL.xlsx")
+    div_pl_tax.to_excel(report_prefix + "DIV_TAX.xlsx")
 
 
 main()
