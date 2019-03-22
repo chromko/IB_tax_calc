@@ -2,6 +2,7 @@ from datetime import datetime, date, time
 from copy import deepcopy
 import pandas as pd
 from typing import NamedTuple
+import argparse
 import sys
 if sys.version_info[0] < 3:
     from StringIO import StringIO
@@ -154,8 +155,9 @@ def create_currency_table_bs(courses_file, df):
 
     pl_table[["CB_course", "Date"]] = pl_table[["CB_course", "Date"]].apply(lambda x: x if x["CB_course"] > 0 else setter(
         x, "CB_course", currency_table.iloc[[(currency_table.Date[currency_table.Date <= x["Date"]] - x["Date"]).idxmax()]]["CB_course"]), axis=1)
-
-    pl_table["PL_Rub"] = pl_table.PL * pl_table.CB_course
+    pl_table["Cash_Rub"] = pl_table['Cash'] * pl_table['CB_course'] if 'Cash' in pl_table.columns else 0
+    pl_table["PL_Rub"] = 0
+    pl_table = pl_table.apply(lambda x: x if x.name % 2 == 0 else setter(x, "PL_Rub", x["Cash_Rub"] + pl_table.ix[x.name - 1]["Cash_Rub"] ), axis=1)
 
     return pl_table
 
@@ -239,6 +241,7 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
         "CB_course": "Курс руб. ЦБРФ",
         "PL_Rub": "Прибыль / Убыток, руб.",
         "PL": "Прибыль / Убыток, Валюта",
+        "Cash_Rub": "Кон.сумма сделки, руб",
         "Cash": "Кон.сумма сделки, Валюта"})
 
     return finish_pl
@@ -296,23 +299,38 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
 
 def main():
 
-    finish_tax = "13"
+    parser = argparse.ArgumentParser(description='Export ES query results to Prometheus.')
+
+    parser.add_argument('-t', '--tax', default='13',
+                        help='Amount of end tax for dividents')
+
+    parser.add_argument('-c', '--current-year-file', default='example.csv',
+                        help='Main File with data for analyzing in CSV format')
+
+    parser.add_argument('-p', '--previous-year-file', default='',
+                        help='Helpful file with data for analyzing in CSV format')
+
+    parser.add_argument('-cc', '--currency-courses-file', default='',
+                        help='File with currency courses for period of time')
+
+    args = parser.parse_args()
+
     currency_courses_file = "RC_F09_03_2017_T16_03_2019 (1).xlsx"
 
-    prev_year_file = "IB_2017.txt"
-    this_year_file = "report_2.txt"
+    current_year_file = "U2164556_2018.txt"
+    previous_year_file = "U2164556_2017.txt"
 
     trn_pl = count_trn_pl(
-        this_year_file,
-        prev_year_file=prev_year_file,
+        current_year_file,
+        prev_year_file=previous_year_file,
         currency_courses_file=currency_courses_file)
 
     div_pl_tax = count_dividents_pl_tax(
-        this_year_file,
-        currency_courses_file=currency_courses_file, finish_tax=finish_tax)
-
-    trn_pl.to_excel("trn_pl.xlsx")
-    trn_pl.to_excel("div_pl_tax.xlsx")
+        current_year_file,
+        currency_courses_file=currency_courses_file, finish_tax=args.tax)
+    report_prefix = args.current_year_file.split(".")[0]
+    trn_pl.to_excel(current_year_file + "PL.xlsx")
+    trn_pl.to_excel(current_year_file + "DIV_TAX.xlsx")
 
     print(trn_pl)
 
