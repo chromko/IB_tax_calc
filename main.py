@@ -56,20 +56,20 @@ def merge_tables(result_table, table1, table2, iteration=0):
             if row1[1]["Open/CloseIndicator"] != "O" and row1[1]["Open/CloseIndicator"] != "C":
                 continue
             row2_o_t = table2[(table2.Symbol == row1[1]["Symbol"]) & (table2["Buy/Sell"] != row1[1]["Buy/Sell"]) & ((row1[1]["Open/CloseIndicator"]
-                                                                                                                   == "O") & (row1[1]["Date"] <= table2["Date"]) | (row1[1]["Open/CloseIndicator"] == "C") & (row1[1]["Date"] >= table2["Date"]))]
+                                                                                                                     == "O") & (row1[1]["Date"] <= table2["Date"]) | (row1[1]["Open/CloseIndicator"] == "C") & (row1[1]["Date"] >= table2["Date"]))]
             if row2_o_t.empty:
                 row1[1]["Open/CloseIndicator"] += ";P"
                 table1.loc[row1[0]] = row1[1]
             else:
                 row2_o = row2_o_t[(abs(row2_o_t["Quantity"]) <=
-                                 abs(row1[1]["Quantity"]))]
+                                   abs(row1[1]["Quantity"]))]
 
                 if row2_o.empty:
                     continue
 
                 if not row2_o_t[(abs(row2_o_t["Quantity"]) >
-                               abs(row1[1]["Quantity"])) & (row2_o_t.index <
-                               row2_o.index[0])].empty:
+                                 abs(row1[1]["Quantity"])) & (row2_o_t.index <
+                                                              row2_o.index[0])].empty:
                     continue
 
                 row2 = row2_o.loc[row2_o.index[0]]
@@ -229,7 +229,6 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                 "TradeDate": "Date"})
         prev_year_df["Date"] = pd.to_datetime(
             prev_year_df["Date"], format="%Y%m%d")
-
 
         _, prev_year_pl_df_1, prev_year_pl_df_2 = create_pl_table(prev_year_df)
         additional_trans_df = pd.concat(
