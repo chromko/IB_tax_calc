@@ -331,7 +331,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                               "PL",
                                               "CB_course",
                                               "PL_Rub",
-                                              "Tax_percent"
+                                              "Tax_percent",
                                               "Tax_to_pay_RUB"]].rename(index=str,
                                                                         columns={"Symbol": "Актив",
                                                                                  "Date": "Дата",
