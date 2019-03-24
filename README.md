@@ -13,6 +13,13 @@ This simple python script creates xlsx reports from IB CSV report
 * `--tax` (Default=13) - tax you have to pay in %
 
 ## How to use
+Install dependencies
+
+```
+pip install -r requiremenmts.txt
+```
+
+## How to use
 ```
 python3 main.py --currency-courses-file="courses.xlsx"\
                 --current-year-file="Account1_2018.txt"\
