@@ -310,6 +310,7 @@ def count_tax_debt(df, final_tax):
     df["Tax_to_pay_RUB"] = df[df["Tax_percent"] <= float(
         final_tax)]["Tax_RUB"] * (float(final_tax) - df["Tax_percent"]) / df["Tax_percent"]
     df["Tax_to_pay_RUB"] = abs(df["Tax_to_pay_RUB"])
+    df["Country"] = "US"
 
     return df
 
@@ -331,21 +332,21 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                               "Date",
                                               "CurrencyPrimary",
                                               "Amount",
+                                              "Country",
                                               "Tax",
-                                              "PL",
                                               "CB_course",
-                                              "PL_Rub",
                                               "Tax_percent",
+                                              "Tax_RUB",
                                               "Tax_to_pay_RUB"]].rename(index=str,
                                                                         columns={"Symbol": "Актив",
-                                                                                 "Date": "Дата",
+                                                                                 "Country": "Страна",
+                                                                                 "Date": "Дата начисления",
                                                                                  "CurrencyPrimary": "Валюта",
-                                                                                 "Tax_to_pay_RUB": "Сумма к уплате, руб",
+                                                                                 "Tax_to_pay_RUB": "Налог к доплате, руб",
                                                                                  "CB_course": "Курс руб. ЦБРФ",
-                                                                                 "PL": "Прибыль / Убыток, Валюта",
-                                                                                 "PL_Rub": "Прибыль / Убыток, руб",
+                                                                                 "Tax_RUB": "Удержан налог, руб",
                                                                                  "Tax": "Налог, валюта",
-                                                                                 "Tax_percent": "Уплаченный налог, процент",
+                                                                                 "Tax_percent": "Размер удержан налога",
                                                                                  "Amount": "Сумма выплат, Валюта"})
 
     return tax_debt_pl
@@ -389,7 +390,7 @@ def main():
 
         pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
         trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
-        div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
+        div_pl_tax["Дата начисления"] = div_pl_tax["Дата начисления"].apply(
             lambda x: x.strftime("%Y-%m-%d"))
 
         trn_pl.to_excel(report_prefix + "_PL.xlsx")
