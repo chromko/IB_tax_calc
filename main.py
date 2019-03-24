@@ -369,21 +369,16 @@ def main():
 
     args = parser.parse_args()
 
-    currency_courses_file = "RC_F09_03_2017_T16_03_2019 (1).xlsx"
-
-    current_year_file = "U2164556_2018.txt"
-    previous_year_file = "IB_2017.csv"
 
     trn_pl = count_trn_pl(
-        current_year_file,
-        prev_year_file=previous_year_file,
-        currency_courses_file=currency_courses_file)
+        args.current_year_file,
+        prev_year_file=args.previous_year_file,
+        currency_courses_file=args.currency_courses_file)
 
     div_pl_tax = count_dividents_pl_tax(
         current_year_file,
-        currency_courses_file=currency_courses_file, finish_tax=args.tax)
+        currency_courses_file=args.currency_courses_file, finish_tax=args.tax)
     report_prefix = current_year_file.split(".")[0]
-    # report_prefix = args.current_year_file.split(".")[0]
 
     pl_to_compare = trn_pl.groupby(
         ['Актив'])[['Прибыль / Убыток, Валюта']].sum()
