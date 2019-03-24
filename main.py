@@ -376,20 +376,20 @@ def main():
         currency_courses_file=args.currency_courses_file)
 
     div_pl_tax = count_dividents_pl_tax(
-        current_year_file,
+        args.current_year_file,
         currency_courses_file=args.currency_courses_file, finish_tax=args.tax)
-    report_prefix = current_year_file.split(".")[0]
+    report_prefix = args.current_year_file.split(".")[0]
 
     pl_to_compare = trn_pl.groupby(
         ['Актив'])[['Прибыль / Убыток, Валюта']].sum()
 
-    pl_to_compare.to_excel(report_prefix + "compare.xlsx")
+    pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
     trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
     div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
         lambda x: x.strftime("%Y-%m-%d"))
 
-    trn_pl.to_excel(report_prefix + "PL.xlsx")
-    div_pl_tax.to_excel(report_prefix + "DIV_TAX.xlsx")
+    trn_pl.to_excel(report_prefix + "_PL.xlsx")
+    div_pl_tax.to_excel(report_prefix + "_DIV_TAX.xlsx")
 
 
 main()
