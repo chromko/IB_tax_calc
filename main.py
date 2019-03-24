@@ -249,33 +249,36 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
         prev_year_pl, df_1, df_2 = create_pl_table(additional_trans_df)
 
     pl_df = pd.concat([prev_year_pl, this_year_pl])
-    pl_df["Cash"] = pl_df["IBCommission"] + pl_df["Proceeds"]
-    pl = create_currency_table_bs(courses_file=currency_courses_file, df=pl_df)
+    if not pl_df.empty:
+        pl_df["Cash"] = pl_df["IBCommission"] + pl_df["Proceeds"]
 
-    finish_pl = pl[["Symbol",
-                    "Date",
-                    "CurrencyPrimary",
-                    "Buy/Sell",
-                    "Quantity",
-                    "TradePrice",
-                    "PL",
-                    "Cash",
-                    "CB_course",
-                    "Cash_Rub",
-                    "PL_Rub"]].rename(index=str,
-                                      columns={"Symbol": "Актив",
-                                               "Date": "Дата",
-                                               "CurrencyPrimary": "Валюта",
-                                               "Buy/Sell": "Сделка",
-                                               "Quantity": "Кол-во",
-                                               "TradePrice": "Стоимость позиции",
-                                               "CB_course": "Курс руб. ЦБРФ",
-                                               "PL_Rub": "Прибыль / Убыток, руб.",
-                                               "PL": "Прибыль / Убыток, Валюта",
-                                               "Cash_Rub": "Кон.сумма сделки, руб",
-                                               "Cash": "Кон.сумма сделки, Валюта"})
+        pl = create_currency_table_bs(courses_file=currency_courses_file, df=pl_df)
 
-    return finish_pl
+        finish_pl = pl[["Symbol",
+                        "Date",
+                        "CurrencyPrimary",
+                        "Buy/Sell",
+                        "Quantity",
+                        "TradePrice",
+                        "PL",
+                        "Cash",
+                        "CB_course",
+                        "Cash_Rub",
+                        "PL_Rub"]].rename(index=str,
+                                        columns={"Symbol": "Актив",
+                                                "Date": "Дата",
+                                                "CurrencyPrimary": "Валюта",
+                                                "Buy/Sell": "Сделка",
+                                                "Quantity": "Кол-во",
+                                                "TradePrice": "Стоимость позиции",
+                                                "CB_course": "Курс руб. ЦБРФ",
+                                                "PL_Rub": "Прибыль / Убыток, руб.",
+                                                "PL": "Прибыль / Убыток, Валюта",
+                                                "Cash_Rub": "Кон.сумма сделки, руб",
+                                                "Cash": "Кон.сумма сделки, Валюта"})
+
+        return finish_pl
+    return pl_df
 
 
 def create_div_table(df):
@@ -306,6 +309,7 @@ def count_tax_debt(df, final_tax):
 
     df["Tax_to_pay_RUB"] = df[df["Tax_percent"] <= float(
         final_tax)]["Tax_RUB"] * (float(final_tax) - df["Tax_percent"]) / df["Tax_percent"]
+    df["Tax_to_pay_RUB"] = abs(df["Tax_to_pay_RUB"])
 
     return df
 
@@ -379,16 +383,16 @@ def main():
         args.current_year_file,
         currency_courses_file=args.currency_courses_file, finish_tax=args.tax)
     report_prefix = args.current_year_file.split(".")[0]
+    if not trn_pl.empty:
+        pl_to_compare = trn_pl.groupby(
+            ['Актив'])[['Прибыль / Убыток, Валюта']].sum()
 
-    pl_to_compare = trn_pl.groupby(
-        ['Актив'])[['Прибыль / Убыток, Валюта']].sum()
+        pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
+        trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
+        div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
+            lambda x: x.strftime("%Y-%m-%d"))
 
-    pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
-    trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
-    div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
-        lambda x: x.strftime("%Y-%m-%d"))
-
-    trn_pl.to_excel(report_prefix + "_PL.xlsx")
+        trn_pl.to_excel(report_prefix + "_PL.xlsx")
     div_pl_tax.to_excel(report_prefix + "_DIV_TAX.xlsx")
 
 
