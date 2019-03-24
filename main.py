@@ -296,7 +296,6 @@ def create_div_table(df):
 
         divs_table = divs_table.append(div_row[1])
     divs_table["PL"] = divs_table["Amount"] + divs_table["Tax"]
-
     return divs_table
 
 
@@ -332,6 +331,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                               "PL",
                                               "CB_course",
                                               "PL_Rub",
+                                              "Tax_percent"
                                               "Tax_to_pay_RUB"]].rename(index=str,
                                                                         columns={"Symbol": "Актив",
                                                                                  "Date": "Дата",
