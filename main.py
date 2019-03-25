@@ -317,6 +317,7 @@ def count_tax_debt(df, final_tax):
         final_tax)]["Tax_RUB"] * (float(final_tax) - df["Tax_percent"]) / df["Tax_percent"]
     df["Tax_to_pay_RUB"] = abs(df["Tax_to_pay_RUB"])
     df["Country"] = "US"
+    df["Amount_Rub"] = df["Amount"] * df["CB_course"]
 
     return df
 
@@ -341,6 +342,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                               "Country",
                                               "Tax",
                                               "CB_course",
+                                              "Amount_Rub",
                                               "Tax_percent",
                                               "Tax_RUB",
                                               "Tax_to_pay_RUB"]].rename(index=str,
@@ -353,6 +355,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                                                                  "Tax_RUB": "Удержан налог, руб",
                                                                                  "Tax": "Налог, валюта",
                                                                                  "Tax_percent": "Размер удержан налога",
+                                                                                 "Amount_Rub": "Сумма выплат, Руб"
                                                                                  "Amount": "Сумма выплат, Валюта"})
 
     return tax_debt_pl
