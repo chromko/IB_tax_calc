@@ -252,7 +252,8 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
     if not pl_df.empty:
         pl_df["Cash"] = pl_df["IBCommission"] + pl_df["Proceeds"]
 
-        pl = create_currency_table_bs(courses_file=currency_courses_file, df=pl_df)
+        pl = create_currency_table_bs(
+            courses_file=currency_courses_file, df=pl_df)
 
         finish_pl = pl[["Symbol",
                         "Date",
@@ -265,17 +266,17 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                         "CB_course",
                         "Cash_Rub",
                         "PL_Rub"]].rename(index=str,
-                                        columns={"Symbol": "Актив",
-                                                "Date": "Дата",
-                                                "CurrencyPrimary": "Валюта",
-                                                "Buy/Sell": "Сделка",
-                                                "Quantity": "Кол-во",
-                                                "TradePrice": "Стоимость позиции",
-                                                "CB_course": "Курс руб. ЦБРФ",
-                                                "PL_Rub": "Прибыль / Убыток, руб.",
-                                                "PL": "Прибыль / Убыток, Валюта",
-                                                "Cash_Rub": "Кон.сумма сделки, руб",
-                                                "Cash": "Кон.сумма сделки, Валюта"})
+                                          columns={"Symbol": "Актив",
+                                                   "Date": "Дата",
+                                                   "CurrencyPrimary": "Валюта",
+                                                   "Buy/Sell": "Сделка",
+                                                   "Quantity": "Кол-во",
+                                                   "TradePrice": "Стоимость позиции",
+                                                   "CB_course": "Курс руб. ЦБРФ",
+                                                   "PL_Rub": "Прибыль / Убыток, руб.",
+                                                   "PL": "Прибыль / Убыток, Валюта",
+                                                   "Cash_Rub": "Кон.сумма сделки, руб",
+                                                   "Cash": "Кон.сумма сделки, Валюта"})
 
         return finish_pl
     return pl_df
@@ -291,7 +292,7 @@ def create_div_table(df):
         "PL"
     ])
 
-    for row in df[df["ActivityCode"].isin(["DIV","PIL"]) ].iterrows():
+    for row in df[df["ActivityCode"].isin(["DIV", "PIL"])].iterrows():
         div_row = deepcopy(row)
         div_row[1]["Tax"] = 0
 
@@ -327,8 +328,8 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
     this_year_df["Date"] = pd.to_datetime(
         this_year_df["Date"], format="%Y%m%d")
 
-    this_year_df = this_year_df[this_year_df["ActivityCode"].isin(["PIL",
-                                                                  "FRTAX", "DIV"])]
+    this_year_df = this_year_df[this_year_df["ActivityCode"].isin(
+        ["PIL", "FRTAX", "DIV"])]
     tax_list = create_div_table(this_year_df)
     pl = create_currency_table_bs(
         courses_file=currency_courses_file, df=tax_list)
@@ -379,7 +380,6 @@ def main():
 
     args = parser.parse_args()
 
-
     trn_pl = count_trn_pl(
         args.current_year_file,
         prev_year_file=args.previous_year_file,
@@ -395,10 +395,11 @@ def main():
 
         pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
         trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
-        div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
-            lambda x: x.strftime("%Y-%m-%d"))
 
         trn_pl.to_excel(report_prefix + "_PL.xlsx")
+    div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
+        lambda x: x.strftime("%Y-%m-%d"))
+
     div_pl_tax.to_excel(report_prefix + "_DIV_TAX.xlsx")
 
 
