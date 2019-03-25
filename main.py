@@ -291,11 +291,16 @@ def create_div_table(df):
         "PL"
     ])
 
-    for row in df[df["ActivityCode"] == "DIV"].iterrows():
+    for row in df[df["ActivityCode"].isin(["DIV","PIL"]) ].iterrows():
         div_row = deepcopy(row)
+        div_row[1]["Tax"] = 0
+
         find_tax = df[(df["ActivityCode"] == "FRTAX") & (
             df["Symbol"] == row[1]["Symbol"]) & (df["Date"] == row[1]["Date"])]
-        div_row[1]["Tax"] = find_tax["Amount"].sum()
+
+        if not find_tax.empty:
+            div_row[1]["Tax"] = find_tax.loc[find_tax.index[0]]["Amount"]
+            df = df.drop(find_tax.index[0])
 
         divs_table = divs_table.append(div_row[1])
     divs_table["PL"] = divs_table["Amount"] + divs_table["Tax"]
@@ -322,7 +327,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
     this_year_df["Date"] = pd.to_datetime(
         this_year_df["Date"], format="%Y%m%d")
 
-    this_year_df = this_year_df[this_year_df["ActivityCode"].isin([
+    this_year_df = this_year_df[this_year_df["ActivityCode"].isin(["PIL",
                                                                   "FRTAX", "DIV"])]
     tax_list = create_div_table(this_year_df)
     pl = create_currency_table_bs(
@@ -340,7 +345,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                               "Tax_to_pay_RUB"]].rename(index=str,
                                                                         columns={"Symbol": "Актив",
                                                                                  "Country": "Страна",
-                                                                                 "Date": "Дата начисления",
+                                                                                 "Date": "Дата",
                                                                                  "CurrencyPrimary": "Валюта",
                                                                                  "Tax_to_pay_RUB": "Налог к доплате, руб",
                                                                                  "CB_course": "Курс руб. ЦБРФ",
@@ -390,7 +395,7 @@ def main():
 
         pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
         trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
-        div_pl_tax["Дата начисления"] = div_pl_tax["Дата начисления"].apply(
+        div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(
             lambda x: x.strftime("%Y-%m-%d"))
 
         trn_pl.to_excel(report_prefix + "_PL.xlsx")
