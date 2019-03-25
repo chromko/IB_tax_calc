@@ -355,7 +355,7 @@ def count_dividents_pl_tax(this_year_file, currency_courses_file, finish_tax):
                                                                                  "Tax_RUB": "Удержан налог, руб",
                                                                                  "Tax": "Налог, валюта",
                                                                                  "Tax_percent": "Размер удержан налога",
-                                                                                 "Amount_Rub": "Сумма выплат, Руб"
+                                                                                 "Amount_Rub": "Сумма выплат, Руб",
                                                                                  "Amount": "Сумма выплат, Валюта"})
 
     return tax_debt_pl
