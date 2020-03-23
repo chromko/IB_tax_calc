@@ -183,7 +183,6 @@ def create_currency_table_bs(courses_file, df):
     )
 
     pl_table = pd.merge(df, currency_table, on="Date", sort=False, how="left")
-
     pl_table[["CB_course", "Date"]] = pl_table[["CB_course", "Date"]].apply(
         lambda x: x
         if x["CB_course"] > 0
@@ -210,7 +209,7 @@ def create_currency_table_bs(courses_file, df):
             lambda x: x
             if x.name % 2 == 0
             else setter(
-                x, "PL_Rub", x["Cash_Rub"] + pl_table.ix[x.name - 1]["Cash_Rub"]
+                x, "PL_Rub", x["Cash_Rub"] + pl_table.iloc[x.name - 1]["Cash_Rub"],
             ),
             axis=1,
         )
@@ -238,7 +237,6 @@ def export_frame_from_csv(csv_file, frame_name):
     }
 
     frames = find_frames_in_csv(csv_file)
-    print(frames)
 
     return export_from_csv(csv_file, search(frame_name, frames)).filter(
         items=frame_items[frame_name]
@@ -250,7 +248,6 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
     this_year_df = export_frame_from_csv(this_year_file, "TRNT").rename(
         index=str, columns={"TradeDate": "Date"}
     )
-    print(this_year_df)
     this_year_df["Date"] = pd.to_datetime(this_year_df["Date"], format="%Y%m%d")
     this_year_df = this_year_df[(abs(this_year_df["Proceeds"])) > 0]
 
