@@ -1,4 +1,5 @@
 *.xlsx
 *.txt
-!requiremenmts.txt
+!requirements.txt
 *.csv
+.vscode
