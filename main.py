@@ -20,7 +20,7 @@ def find_frames_in_csv(file):
     with open(file) as in_file:
         ct = 0
         for num, line in enumerate(in_file, 1):
-            if start_frame in line:
+            if line.strip().split("|")[0] == start_frame:
                 frames.append(
                     dict(
                         name=line.strip().split("|")[2],
@@ -29,7 +29,7 @@ def find_frames_in_csv(file):
                         eos_line=0,
                     )
                 )
-            if end_frame in line:
+            if line.strip().split("|")[0] == end_frame:
                 frames[ct]["eos_line"] = num
                 ct += 1
 
@@ -238,6 +238,7 @@ def export_frame_from_csv(csv_file, frame_name):
     }
 
     frames = find_frames_in_csv(csv_file)
+    print(frames)
 
     return export_from_csv(csv_file, search(frame_name, frames)).filter(
         items=frame_items[frame_name]
