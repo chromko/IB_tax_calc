@@ -172,7 +172,6 @@ def create_pl_table(pd_frames):
         ]
     )
     oc_df, df_1, df_2 = merge_tables(open_close_df, open_operations, close_operations)
-    print(oc_df[oc_df["Symbol"].isin(["MGP"])])
 
     return oc_df, df_1, df_2
 
