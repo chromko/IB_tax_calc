@@ -90,8 +90,12 @@ def merge_tables(result_table, table1, table2, iteration=0):
                 ].empty:
                     continue
 
-                row2 = row2_o.loc[row2_o.index[0]]
                 copy_row1 = deepcopy(row1)
+                row2 = (
+                    row2_o.loc[row2_o.index[0]]
+                    if copy_row1[1]["Open/CloseIndicator"] == "O"
+                    else row2_o.loc[row2_o.index[-1]]
+                )
                 result_table = result_table.append(row2, ignore_index=True)
 
                 oc_ref = abs(row2["Quantity"] / row1[1]["Quantity"])
@@ -109,11 +113,13 @@ def merge_tables(result_table, table1, table2, iteration=0):
 
                 result_table = result_table.append(row1[1], ignore_index=True)
                 result_table.at[result_table.index[-1], "PL"] = pl
-                table2 = table2.drop(row2_o.index[0])
+                if copy_row1[1]["Open/CloseIndicator"] == "O":
+                    table2 = table2.drop(row2_o.index[0])
+                else:
+                    table2 = table2.drop(row2_o.index[-1])
                 copy_row1[1]["Quantity"] -= row1[1]["Quantity"]
                 copy_row1[1]["Proceeds"] -= row1[1]["Proceeds"]
                 copy_row1[1]["IBCommission"] -= row1[1]["IBCommission"]
-
                 if copy_row1[1]["Quantity"] == 0:
                     table1 = table1.drop(copy_row1[0])
                 else:
@@ -166,6 +172,7 @@ def create_pl_table(pd_frames):
         ]
     )
     oc_df, df_1, df_2 = merge_tables(open_close_df, open_operations, close_operations)
+    print(oc_df[oc_df["Symbol"].isin(["MGP"])])
 
     return oc_df, df_1, df_2
 
