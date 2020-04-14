@@ -4,6 +4,8 @@ import pandas as pd
 from typing import NamedTuple
 import argparse
 import sys
+import uuid
+import random
 
 if sys.version_info[0] < 3:
     from StringIO import StringIO
@@ -96,7 +98,17 @@ def merge_tables(result_table, table1, table2, iteration=0):
                     if copy_row1[1]["Open/CloseIndicator"] == "O"
                     else row2_o.loc[row2_o.index[-1]]
                 )
+                op_id = (
+                    row2_o.loc[row2_o.index[0]]["Date"].to_pydatetime().timestamp()
+                    if copy_row1[1]["Open/CloseIndicator"] == "O"
+                    else row2_o.loc[row2_o.index[-1]]["Date"]
+                    .to_pydatetime()
+                    .timestamp()
+                ) + copy_row1[1]["Date"].to_pydatetime().timestamp() * random.randint(
+                    10, 100
+                )
                 result_table = result_table.append(row2, ignore_index=True)
+                result_table.at[result_table.index[-1], "Op_ID"] = op_id
 
                 oc_ref = abs(row2["Quantity"] / row1[1]["Quantity"])
 
@@ -110,9 +122,10 @@ def merge_tables(result_table, table1, table2, iteration=0):
                     + row1[1]["IBCommission"]
                     + row2["IBCommission"]
                 )
-
+                result_table.at[result_table.index[-1], "PL"] = pl
                 result_table = result_table.append(row1[1], ignore_index=True)
                 result_table.at[result_table.index[-1], "PL"] = pl
+                result_table.at[result_table.index[-1], "Op_ID"] = op_id
                 if copy_row1[1]["Open/CloseIndicator"] == "O":
                     table2 = table2.drop(row2_o.index[0])
                 else:
@@ -154,9 +167,21 @@ def merge_orphaned_tables(open_operations, close_operations):
 
 
 def create_pl_table(pd_frames):
+    groupped_pd = pd_frames.groupby(
+        by=[
+            "Symbol",
+            "Date",
+            "Buy/Sell",
+            # "TradePrice",
+            "CurrencyPrimary",
+            "Open/CloseIndicator",
+        ],
+        as_index=False,
+    )[["Quantity", "Proceeds", "IBCommission"]].sum()
+    # groupped_pd.to_excel("{}.xlsx".format(uuid.uuid4()))
 
-    open_operations = pd_frames[pd_frames["Open/CloseIndicator"].isin(["O"])]
-    close_operations = pd_frames[(pd_frames["Open/CloseIndicator"].isin(["C"]))]
+    open_operations = groupped_pd.loc[groupped_pd["Open/CloseIndicator"] == "O"]
+    close_operations = groupped_pd.loc[groupped_pd["Open/CloseIndicator"] == "C"]
 
     open_close_df = pd.DataFrame(
         columns=[
@@ -166,9 +191,10 @@ def create_pl_table(pd_frames):
             "Buy/Sell",
             "Quantity",
             "CurrencyPrimary",
-            "TradePrice",
+            # "TradePrice",
             "Proceeds",
             "PL",
+            "Op_ID",
         ]
     )
     oc_df, df_1, df_2 = merge_tables(open_close_df, open_operations, close_operations)
@@ -212,7 +238,9 @@ def create_currency_table_bs(courses_file, df):
     pl_table["PL_Rub"] = 0
     if "ActivityCode" not in pl_table.columns:
         pl_table = pl_table.apply(
-            lambda x: x
+            lambda x: setter(
+                x, "PL_Rub", x["Cash_Rub"] + pl_table.iloc[x.name + 1]["Cash_Rub"],
+            )
             if x.name % 2 == 0
             else setter(
                 x, "PL_Rub", x["Cash_Rub"] + pl_table.iloc[x.name - 1]["Cash_Rub"],
@@ -234,7 +262,7 @@ def export_frame_from_csv(csv_file, frame_name):
             "Buy/Sell",
             "CurrencyPrimary",
             "Quantity",
-            "TradePrice",
+            # "TradePrice",
             "IBCommission",
             "Proceeds",
             "Open/CloseIndicator",
@@ -265,8 +293,9 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
             index=str, columns={"TradeDate": "Date"}
         )
         prev_year_df["Date"] = pd.to_datetime(prev_year_df["Date"], format="%Y%m%d")
+        prev_year_df = prev_year_df[(abs(prev_year_df["Proceeds"])) > 0]
 
-        _, prev_year_pl_df_1, prev_year_pl_df_2 = create_pl_table(prev_year_df)
+        prev_pl, prev_year_pl_df_1, prev_year_pl_df_2 = create_pl_table(prev_year_df)
         additional_trans_df = pd.concat(
             [
                 prev_year_pl_df_1[prev_year_pl_df_1["Open/CloseIndicator"] == "O;P"][
@@ -302,12 +331,13 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                 "CurrencyPrimary",
                 "Buy/Sell",
                 "Quantity",
-                "TradePrice",
+                # "TradePrice",
                 "PL",
                 "Cash",
                 "CB_course",
                 "Cash_Rub",
                 "PL_Rub",
+                "Op_ID",
             ]
         ].rename(
             index=str,
@@ -317,7 +347,7 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                 "CurrencyPrimary": "Валюта",
                 "Buy/Sell": "Сделка",
                 "Quantity": "Кол-во",
-                "TradePrice": "Стоимость позиции",
+                # "TradePrice": "Стоимость позиции",
                 "CB_course": "Курс руб. ЦБРФ",
                 "PL_Rub": "Прибыль / Убыток, руб.",
                 "PL": "Прибыль / Убыток, Валюта",
@@ -459,12 +489,39 @@ def main():
         currency_courses_file=args.currency_courses_file,
         finish_tax=args.tax,
     )
-    report_prefix = args.current_year_file.split(".")[0]
+    report_prefix = args.current_year_file.split(".")[0][:-30]
     if not trn_pl.empty:
         pl_to_compare = trn_pl.groupby(["Актив"])[["Прибыль / Убыток, Валюта"]].sum()
-
-        pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
+        # pl_groupped_by_date = trn_pl.groupby(["Актив"]).sum()
         trn_pl["Дата"] = trn_pl["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
+        groupped_by_date_pl = (
+            trn_pl.replace({"BUY": "Покупка", "SELL": "Продажа"})
+            .groupby(
+                by=[
+                    "Актив",
+                    "Op_ID",
+                    "Прибыль / Убыток, Валюта",
+                    "Прибыль / Убыток, руб.",
+                    "Дата",
+                    "Сделка",
+                    "Валюта",
+                    # "Стоимость позиции",
+                    "Курс руб. ЦБРФ",
+                ]
+            )[
+                [
+                    "Кол-во",
+                    "Кон.сумма сделки, Валюта",
+                    "Кон.сумма сделки, руб",
+                    "Прибыль / Убыток, руб.",
+                ]
+            ]
+            .sum()
+        )
+        groupped_by_date_pl.reset_index(level="Op_ID", drop=True).to_excel(
+            report_prefix + "_PL_groupped.xlsx"
+        )
+        pl_to_compare.to_excel(report_prefix + "_PL_compare.xlsx")
 
         trn_pl.to_excel(report_prefix + "_PL.xlsx")
     div_pl_tax["Дата"] = div_pl_tax["Дата"].apply(lambda x: x.strftime("%Y-%m-%d"))
