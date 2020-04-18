@@ -192,6 +192,7 @@ def create_pl_table(pd_frames):
             "Quantity",
             "CurrencyPrimary",
             # "TradePrice",
+            "IBCommission",
             "Proceeds",
             "PL",
             "Op_ID",
@@ -333,6 +334,7 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                 "Quantity",
                 # "TradePrice",
                 "PL",
+                "IBCommission",
                 "Cash",
                 "CB_course",
                 "Cash_Rub",
@@ -349,9 +351,10 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                 "Quantity": "Кол-во",
                 # "TradePrice": "Стоимость позиции",
                 "CB_course": "Курс руб. ЦБРФ",
-                "PL_Rub": "Прибыль / Убыток, руб.",
+                "PL_Rub": "Прибыль / Убыток, руб",
                 "PL": "Прибыль / Убыток, Валюта",
                 "Cash_Rub": "Кон.сумма сделки, руб",
+                "IBCommission": "Комиссия, Валюта",
                 "Cash": "Кон.сумма сделки, Валюта",
             },
         )
@@ -501,7 +504,7 @@ def main():
                     "Актив",
                     "Op_ID",
                     "Прибыль / Убыток, Валюта",
-                    "Прибыль / Убыток, руб.",
+                    "Прибыль / Убыток, руб",
                     "Дата",
                     "Сделка",
                     "Валюта",
@@ -511,13 +514,22 @@ def main():
             )[
                 [
                     "Кол-во",
+                    "Комиссия, Валюта",
                     "Кон.сумма сделки, Валюта",
                     "Кон.сумма сделки, руб",
-                    "Прибыль / Убыток, руб.",
                 ]
             ]
             .sum()
         )
+        profit_sum = trn_pl[trn_pl["Кон.сумма сделки, руб"] > 0][
+            "Кон.сумма сделки, руб"
+        ].sum()
+        loss_sum = trn_pl[trn_pl["Кон.сумма сделки, руб"] <= 0][
+            "Кон.сумма сделки, руб"
+        ].sum()
+        groupped_by_date_pl.at["Выручка", "Кон.сумма сделки, руб"] = profit_sum
+        groupped_by_date_pl.at["Затраты", "Кон.сумма сделки, руб"] = loss_sum
+        print(groupped_by_date_pl)
         groupped_by_date_pl.reset_index(level="Op_ID", drop=True).to_excel(
             report_prefix + "_PL_groupped.xlsx"
         )
