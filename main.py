@@ -75,6 +75,11 @@ def merge_tables(result_table, table1, table2, iteration=0):
                     & (row1[1]["Date"] >= table2["Date"])
                 )
             ]
+            # if row1[1]["Symbol"] == "VWO":
+            # print("ROW1")
+            # print(row1)
+            # print("ROW2_OT")
+            # print(row2_o_t)
             if row2_o_t.empty:
                 row1[1]["Open/CloseIndicator"] += ";P"
                 table1.loc[row1[0]] = row1[1]
@@ -289,13 +294,19 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
     this_year_pl, df_1, df_2 = create_pl_table(this_year_df)
     prev_year_pl = pd.DataFrame()
 
-    if prev_year_file != "":
-        prev_year_df = export_frame_from_csv(prev_year_file, "TRNT").rename(
-            index=str, columns={"TradeDate": "Date"}
-        )
+    if len(prev_year_file) > 0:
+        prev_year_df = pd.DataFrame()
+
+        for file in prev_year_file:
+            prev_year_df = prev_year_df.append(
+                export_frame_from_csv(file, "TRNT").rename(
+                    index=str, columns={"TradeDate": "Date"}
+                )
+            )
+        print(df_1)
+        print(df_2)
         prev_year_df["Date"] = pd.to_datetime(prev_year_df["Date"], format="%Y%m%d")
         prev_year_df = prev_year_df[(abs(prev_year_df["Proceeds"])) > 0]
-
         prev_pl, prev_year_pl_df_1, prev_year_pl_df_2 = create_pl_table(prev_year_df)
         additional_trans_df = pd.concat(
             [
@@ -306,7 +317,9 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
                     ::-1
                 ],
                 df_1[df_1["Open/CloseIndicator"] == "C;P"],
+                df_1[df_1["Open/CloseIndicator"] == "C"],
                 df_2[df_2["Open/CloseIndicator"] == "C;P"],
+                df_2[df_2["Open/CloseIndicator"] == "C"],
             ]
         ).reset_index(drop=True)
 
@@ -316,9 +329,9 @@ def count_trn_pl(this_year_file, currency_courses_file, prev_year_file=""):
         additional_trans_df.loc[
             additional_trans_df["Open/CloseIndicator"] == "O;P", "Open/CloseIndicator"
         ] = "O"
-
+        print(additional_trans_df)
         prev_year_pl, df_1, df_2 = create_pl_table(additional_trans_df)
-
+    print(additional_trans_df)
     pl_df = pd.concat([prev_year_pl, this_year_pl])
     if not pl_df.empty:
         pl_df["Cash"] = pl_df["IBCommission"] + pl_df["Proceeds"]
@@ -468,7 +481,8 @@ def main():
     parser.add_argument(
         "-p",
         "--previous-year-file",
-        default="",
+        action="append",
+        default=[],
         help="Helpful file with data for analyzing in CSV format",
     )
 
@@ -529,7 +543,7 @@ def main():
         ].sum()
         groupped_by_date_pl.at["Выручка", "Кон.сумма сделки, руб"] = profit_sum
         groupped_by_date_pl.at["Затраты", "Кон.сумма сделки, руб"] = loss_sum
-        print(groupped_by_date_pl)
+        # print(groupped_by_date_pl)
         groupped_by_date_pl.reset_index(level="Op_ID", drop=True).to_excel(
             report_prefix + "_PL_groupped.xlsx"
         )
